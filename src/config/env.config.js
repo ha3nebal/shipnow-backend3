@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const required = ['MONGODB_URI', 'JWT_SECRET', 'PORT', 'NODE_ENV']
+const required = ['MONGODB_URI', 'PORT', 'NODE_ENV']
 
 for (const name of required) {
   if (!process.env[name]?.trim()) {
@@ -32,6 +32,5 @@ if (!validEnvironments.includes(process.env.NODE_ENV)) {
 export const config = Object.freeze({
   port,
   mongoUri: process.env.MONGODB_URI,
-  jwtSecret: process.env.JWT_SECRET,
   nodeEnv: process.env.NODE_ENV,
 })

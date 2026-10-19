@@ -37,11 +37,10 @@ API REST para la gestión de usuarios, productos, tiendas y pedidos de ShipNow, 
    ```env
    PORT=8080
    MONGODB_URI=mongodb://127.0.0.1:27017/shipnow
-   JWT_SECRET=replace_with_a_secure_secret
    NODE_ENV=development
    ```
 
-   Cambia `MONGODB_URI` si utilizas MongoDB Atlas. Configura `JWT_SECRET` con un valor secreto y seguro para tu entorno.
+   Cambia `MONGODB_URI` si utilizas MongoDB Atlas.
 
 5. Inicia el servidor en desarrollo:
 
@@ -68,6 +67,26 @@ El proyecto utiliza una arquitectura por capas:
 - **Models:** definen los esquemas de MongoDB.
 - **Config:** centraliza la configuración y valida las variables de entorno al iniciar la aplicación.
 - **Constants:** contiene constantes inmutables del dominio.
+
+
+### Decisiones de arquitectura: Service y Repository
+
+La separación entre Service y Repository permite mantener las reglas de negocio independientes del acceso a la base de datos.
+
+**Service — lógica de negocio**
+
+En `src/services/products.service.js`, el servicio determina el estado de un producto según su stock: si es cero, el estado pasa a `out_of_stock`; si es mayor que cero, pasa a `available`. Esta decisión pertenece al servicio porque representa una regla de negocio y no una operación de persistencia.
+
+**Repository — acceso a datos**
+
+En `src/repositories/products.repository.js`, el repositorio encapsula las operaciones de Mongoose, como `findAll()`, `findById()` y `updateById()`. También centraliza los filtros y las proyecciones de las consultas, evitando que los controladores accedan directamente a MongoDB.
+
+**¿Por qué separar ambas responsabilidades?**
+
+Esta separación facilita el mantenimiento y las pruebas. Si cambia una regla de negocio, podemos modificar el servicio sin alterar las consultas de persistencia. Si cambia la forma de consultar la base de datos, podemos modificar el repositorio sin trasladar esa complejidad al controlador.
+
+El controlador se limita a recibir la petición HTTP, invocar el servicio y devolver la respuesta correspondiente.
+
 
 ### Estructura del proyecto
 
@@ -118,7 +137,7 @@ Los productos tienen nombre, descripción, precio, stock y estado. El servicio a
 
 ## Variables de entorno
 
-La configuración se centraliza en `src/config/index.js`. La aplicación valida `PORT`, `MONGODB_URI`, `JWT_SECRET` y `NODE_ENV` al arrancar.
+La configuración se centraliza en `src/config/env.config.js`. La aplicación valida `PORT`, `MONGODB_URI` y `NODE_ENV` al arrancar.
 
 El archivo `.env` contiene la configuración local y no debe subirse al repositorio. `.env.example` sirve como plantilla para configurar el entorno.
 

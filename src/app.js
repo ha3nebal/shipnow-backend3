@@ -1,6 +1,6 @@
 import express from 'express'
 import mongoose from 'mongoose'
-import { config } from './config/index.js'
+import { config } from './config/env.config.js'
 import ordersRouter from './routes/orders.router.js'
 import usersRouter from './routes/users.router.js'
 import productsRouter from './routes/products.router.js'
@@ -25,6 +25,17 @@ app.use((error, req, res, next) => {
       error: {
         code: 'INVALID_ID',
         message: 'El id no es válido',
+      },
+    })
+  }
+
+  // Correo duplicado u otra clave única duplicada en MongoDB
+  if (error.code === 11000) {
+    return res.status(409).json({
+      status: 'error',
+      error: {
+        code: 'DUPLICATE_RESOURCE',
+        message: 'El recurso ya existe',
       },
     })
   }
