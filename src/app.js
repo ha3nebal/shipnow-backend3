@@ -4,6 +4,7 @@ import { config } from './config/env.config.js'
 import ordersRouter from './routes/orders.router.js'
 import usersRouter from './routes/users.router.js'
 import productsRouter from './routes/products.router.js'
+import mocksRouter from './routes/mocks.router.js'
 
 const app = express()
 app.use(express.json())
@@ -14,6 +15,7 @@ console.log('Mongo conectado')
 app.use('/api/orders', ordersRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/products', productsRouter)
+app.use('/api/mocks', mocksRouter)
 
 
  // Middleware de errores provisorio. En el Módulo 3 se reemplaza por la capa centralizada.

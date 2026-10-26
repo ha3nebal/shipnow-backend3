@@ -19,3 +19,9 @@ export const USER_ROLES = Object.freeze({
   DRIVER: 'driver',
   STORE: 'store',
 })
+
+export const ORDER_PRIORITY = Object.freeze({
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+})
