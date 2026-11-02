@@ -1,12 +1,7 @@
 
 import { usersRepository } from '../repositories/users.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
-
-const badRequest = (message) =>
-  Object.assign(new Error(message), { status: 400 })
-
-const conflict = (message) =>
-  Object.assign(new Error(message), { status: 409 })
+import { CustomError } from '../errors/CustomError.js'
 
 export const usersService = {
   createUser: async (data) => {
@@ -16,13 +11,13 @@ export const usersService = {
         : ''
 
     if (!email) {
-      throw badRequest('EMAIL_REQUIRED')
+      throw new CustomError('EMAIL_REQUIRED')
     }
 
     const existingUser = await usersRepository.findByEmail(email)
 
     if (existingUser) {
-      throw conflict('USER_EMAIL_ALREADY_EXISTS')
+      throw new CustomError('USER_EMAIL_ALREADY_EXISTS')
     }
 
     return usersRepository.create({

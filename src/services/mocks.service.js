@@ -3,9 +3,7 @@ import { mockGenerator } from '../utils/mock.generator.js'
 import { mocksRepository } from '../repositories/mocks.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
 import { ORDER_STATUS } from '../constants/index.js'
-
-const badRequest = (message) =>
-  Object.assign(new Error(message), { status: 400 })
+import { CustomError } from '../errors/CustomError.js'
 
 const validateQty = (qty) => {
   const parsedQty = Number(qty)
@@ -15,141 +13,152 @@ const validateQty = (qty) => {
     parsedQty < 1 ||
     parsedQty > 100
   ) {
-    throw badRequest(
-      'INVALID_QTY: qty debe ser un entero entre 1 y 100'
-    )
+    throw new CustomError('INVALID_MOCK_QTY')
   }
 
   return parsedQty
 }
 
 export const mocksService = {
-  // Genera usuarios ficticios sin guardarlos en MongoDB.
+  // Genera usuarios ficticios sin persistirlos.
   generateUsers: (qty = 1) => {
     const count = validateQty(qty)
 
-    return mockGenerator.generateUsers(count)
+    try {
+      return mockGenerator.generateUsers(count)
+    } catch (error) {
+      throw new CustomError('MOCK_GENERATION_FAILED')
+    }
   },
 
-  // Genera pedidos ficticios sin guardarlos en MongoDB.
+  // Genera pedidos ficticios sin persistirlos.
   generateOrders: async (qty = 1) => {
     const count = validateQty(qty)
-    const users = mockGenerator.generateUsers(count)
-    const stores = await storesRepository.findAll()
 
-    if (stores.length === 0) {
-      throw badRequest(
-        'NO_STORES: primero debes crear al menos una tienda'
-      )
+    try {
+      const users = mockGenerator.generateUsers(count)
+      const stores = await storesRepository.findAll()
+
+      if (stores.length === 0) {
+        throw new CustomError('NO_STORES')
+      }
+
+      return mockGenerator.generateOrders({
+        qty: count,
+        users,
+        stores,
+      })
+    } catch (error) {
+      if (error instanceof CustomError) throw error
+
+      throw new CustomError('MOCK_GENERATION_FAILED')
     }
-
-    return mockGenerator.generateOrders({
-      qty: count,
-      users,
-      stores,
-    })
   },
 
-  // Genera entregas ficticias sin guardarlas en MongoDB.
+  // Genera entregas ficticias sin persistirlas.
   generateDeliveries: async (qty = 1) => {
     const count = validateQty(qty)
-    const users = mockGenerator.generateUsers(count)
-    const drivers = mockGenerator.generateDrivers(count)
-    const stores = await storesRepository.findAll()
 
-    if (stores.length === 0) {
-      throw badRequest(
-        'NO_STORES: primero debes crear al menos una tienda'
-      )
+    try {
+      const users = mockGenerator.generateUsers(count)
+      const drivers = mockGenerator.generateDrivers(count)
+      const stores = await storesRepository.findAll()
+
+      if (stores.length === 0) {
+        throw new CustomError('NO_STORES')
+      }
+
+      const orders = mockGenerator.generateOrders({
+        qty: count,
+        users,
+        stores,
+      }).map((order) => ({
+        ...order,
+        status: ORDER_STATUS.PENDING,
+      }))
+
+      return mockGenerator.generateDeliveries({
+        orders,
+        drivers,
+      }).map((delivery) => ({
+        ...delivery,
+        status: ORDER_STATUS.PENDING,
+      }))
+    } catch (error) {
+      if (error instanceof CustomError) throw error
+
+      throw new CustomError('MOCK_GENERATION_FAILED')
     }
-
-    const orders = mockGenerator.generateOrders({
-      qty: count,
-      users,
-      stores,
-    }).map((order) => ({
-      ...order,
-      status: ORDER_STATUS.PENDING,
-    }))
-
-    return mockGenerator.generateDeliveries({
-      orders,
-      drivers,
-    }).map((delivery) => ({
-      ...delivery,
-      status: ORDER_STATUS.PENDING,
-    }))
   },
 
   // Genera e inserta datos de prueba relacionados en MongoDB.
   seed: async (qty = 10) => {
     const count = validateQty(qty)
 
-    // Generar usuarios y conductores ficticios.
-    const users = mockGenerator.generateUsers(count)
-    const drivers = mockGenerator.generateDrivers(count)
+    try {
+      const users = mockGenerator.generateUsers(count)
+      const drivers = mockGenerator.generateDrivers(count)
 
-    // Consultar tiendas existentes.
-    let stores = await storesRepository.findAll()
+      let stores = await storesRepository.findAll()
 
-    // Crear una tienda de prueba si no existen tiendas.
-    if (stores.length === 0) {
-      stores = await mocksRepository.insertStores([
-        {
-          name: 'Tienda de Prueba 1',
-          address: 'Viña del Mar',
-        },
+      if (stores.length === 0) {
+        stores = await mocksRepository.insertStores([
+          {
+            name: 'Tienda de Prueba 1',
+            address: 'Viña del Mar',
+          },
+        ])
+      }
+
+      const orders = mockGenerator.generateOrders({
+        qty: count,
+        users,
+        stores,
+      }).map((order) => ({
+        ...order,
+        status: ORDER_STATUS.PENDING,
+      }))
+
+      const deliveries = mockGenerator.generateDeliveries({
+        orders,
+        drivers,
+      }).map((delivery) => ({
+        ...delivery,
+        status: ORDER_STATUS.PENDING,
+      }))
+
+      await mocksRepository.insertUsers([
+        ...users,
+        ...drivers,
       ])
-    }
 
-    // Generar pedidos con referencias válidas.
-    const orders = mockGenerator.generateOrders({
-      qty: count,
-      users,
-      stores,
-    }).map((order) => ({
-      ...order,
-      status: ORDER_STATUS.PENDING,
-    }))
+      await mocksRepository.insertOrders(orders)
+      await mocksRepository.insertDeliveries(deliveries)
 
-    // Generar entregas relacionadas con los pedidos.
-    const deliveries = mockGenerator.generateDeliveries({
-      orders,
-      drivers,
-    }).map((delivery) => ({
-      ...delivery,
-      status: ORDER_STATUS.PENDING,
-    }))
+      const totalInsertados =
+        users.length +
+        drivers.length +
+        orders.length +
+        deliveries.length
 
-    // Insertar primero usuarios y conductores.
-    await mocksRepository.insertUsers([
-      ...users,
-      ...drivers,
-    ])
+      return {
+        insertados: {
+          usuarios: users.length,
+          conductores: drivers.length,
+          pedidos: orders.length,
+          entregas: deliveries.length,
+          total: totalInsertados,
+        },
+        colecciones: [
+          'users',
+          'orders',
+          'deliveries',
+        ],
+      }
+    } catch (error) {
+      if (error instanceof CustomError) throw error
 
-    // Insertar pedidos antes de las entregas.
-    await mocksRepository.insertOrders(orders)
-    await mocksRepository.insertDeliveries(deliveries)
-
-    const totalInsertados =
-      users.length +
-      drivers.length +
-      orders.length +
-      deliveries.length
-
-    return {
-      insertados: {
-        usuarios: users.length,
-        conductores: drivers.length,
-        pedidos: orders.length,
-        entregas: deliveries.length,
-        total: totalInsertados,
-      },
-      colecciones: [
-        'users',
-        'orders',
-        'deliveries',
-      ],
+      throw new CustomError('MOCK_SEED_FAILED')
     }
   },
 }

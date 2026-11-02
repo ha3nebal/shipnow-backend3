@@ -1,19 +1,20 @@
 
 import { productsRepository } from '../repositories/products.repository.js'
 import { PRODUCT_STATUS } from '../constants/index.js'
-
-const notFound = () =>
-  Object.assign(new Error('PRODUCT_NOT_FOUND'), { status: 404 })
-
-const badRequest = (message) =>
-  Object.assign(new Error(message), { status: 400 })
+import { CustomError } from '../errors/CustomError.js'
 
 const getProductStatus = (stock) =>
-  stock === 0 ? PRODUCT_STATUS.OUT_OF_STOCK : PRODUCT_STATUS.AVAILABLE
+  stock === 0
+    ? PRODUCT_STATUS.OUT_OF_STOCK
+    : PRODUCT_STATUS.AVAILABLE
 
 export const productsService = {
   createProduct: (data) => {
     const stock = data.stock ?? 0
+
+    if (!Number.isFinite(stock) || stock < 0) {
+      throw new CustomError('INVALID_PRODUCT_STOCK')
+    }
 
     return productsRepository.create({
       ...data,
@@ -22,13 +23,12 @@ export const productsService = {
     })
   },
 
-  
   getProducts: ({ status, includeOutOfStock } = {}) => {
     const filter = {}
 
     if (status) {
       if (!Object.values(PRODUCT_STATUS).includes(status)) {
-        throw badRequest('INVALID_PRODUCT_STATUS')
+        throw new CustomError('INVALID_PRODUCT_STATUS')
       }
 
       filter.status = status
@@ -42,17 +42,26 @@ export const productsService = {
 
   getProductById: async (id) => {
     const product = await productsRepository.findById(id)
-    if (!product) throw notFound()
+
+    if (!product) {
+      throw new CustomError('PRODUCT_NOT_FOUND')
+    }
+
     return product
   },
 
   updateProduct: async (id, data) => {
     const currentProduct = await productsRepository.findById(id)
-    if (!currentProduct) throw notFound()
 
-    if (data.stock !== undefined &&
-        (!Number.isFinite(data.stock) || data.stock < 0)) {
-      throw badRequest('INVALID_PRODUCT_STOCK')
+    if (!currentProduct) {
+      throw new CustomError('PRODUCT_NOT_FOUND')
+    }
+
+    if (
+      data.stock !== undefined &&
+      (!Number.isFinite(data.stock) || data.stock < 0)
+    ) {
+      throw new CustomError('INVALID_PRODUCT_STOCK')
     }
 
     const stock = data.stock ?? currentProduct.stock
@@ -65,7 +74,11 @@ export const productsService = {
 
   deleteProduct: async (id) => {
     const product = await productsRepository.deleteById(id)
-    if (!product) throw notFound()
+
+    if (!product) {
+      throw new CustomError('PRODUCT_NOT_FOUND')
+    }
+
     return product
   },
 }

@@ -1,74 +1,31 @@
+
 import express from 'express'
 import mongoose from 'mongoose'
 import { config } from './config/env.config.js'
+
 import ordersRouter from './routes/orders.router.js'
 import usersRouter from './routes/users.router.js'
 import productsRouter from './routes/products.router.js'
 import mocksRouter from './routes/mocks.router.js'
 
+import { errorMiddleware } from './middlewares/error.middleware.js'
+
 const app = express()
+
 app.use(express.json())
 
 await mongoose.connect(config.mongoUri)
 console.log('Mongo conectado')
 
+// Rutas de la API
 app.use('/api/orders', ordersRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/products', productsRouter)
 app.use('/api/mocks', mocksRouter)
 
-
- // Middleware de errores provisorio. En el Módulo 3 se reemplaza por la capa centralizada.
-app.use((error, req, res, next) => {
-  // Error por ID con formato inválido
-  if (error.name === 'CastError') {
-    return res.status(400).json({
-      status: 'error',
-      error: {
-        code: 'INVALID_ID',
-        message: 'El id no es válido',
-      },
-    })
-  }
-
-  // Correo duplicado u otra clave única duplicada en MongoDB
-  if (error.code === 11000) {
-    return res.status(409).json({
-      status: 'error',
-      error: {
-        code: 'DUPLICATE_RESOURCE',
-        message: 'El recurso ya existe',
-      },
-    })
-  }
-
-  // Error de validación del modelo de Mongoose
-  if (error.name === 'ValidationError') {
-    return res.status(400).json({
-      status: 'error',
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: error.message,
-      },
-    })
-  }
-
-  // Otros errores
-  const status = error.status || 500
-  const code = status === 500 ? 'INTERNAL_ERROR' : error.message
-
-  if (status === 500) {
-    console.error(error)
-  }
-
-  return res.status(status).json({
-    status: 'error',
-    error: {
-      code,
-      message: error.message,
-    },
-  })
-})
+// Middleware global de errores.
+// Debe registrarse después de todas las rutas.
+app.use(errorMiddleware)
 
 app.listen(config.port, () => {
   console.log(`ShipNow en puerto ${config.port} (${config.nodeEnv})`)
