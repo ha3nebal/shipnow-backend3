@@ -1,5 +1,14 @@
-
+# Dependencias
 node_modules/
+
+# Variables de entorno
 .env
 .env.*
 !.env.example
+
+# Logs de Winston
+logs/
+*.log
+
+# Archivos de auditoría de rotación
+*.audit.json

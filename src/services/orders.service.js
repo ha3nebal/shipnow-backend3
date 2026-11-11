@@ -4,6 +4,7 @@ import { usersRepository } from '../repositories/users.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
 import { ORDER_STATUS } from '../constants/index.js'
 import { CustomError } from '../errors/CustomError.js'
+import { logger } from '../logger/logger.js'
 
 export const ordersService = {
   createOrder: async (data) => {
@@ -24,11 +25,15 @@ export const ordersService = {
       0,
     )
 
-    return ordersRepository.create({
+    const order = await ordersRepository.create({
       ...data,
       total,
       status: ORDER_STATUS.PENDING,
     })
+
+    logger.info(`Pedido creado correctamente: ${order._id}`)
+
+    return order
   },
 
   getOrders: () => ordersRepository.findAll(),
@@ -54,9 +59,13 @@ export const ordersService = {
       throw new CustomError('ORDER_ALREADY_DELIVERED')
     }
 
-    return ordersRepository.updateStatus(
+    const updatedOrder = await ordersRepository.updateStatus(
       id,
       ORDER_STATUS.DELIVERED,
     )
+
+    logger.info(`Pedido entregado correctamente: ${id}`)
+
+    return updatedOrder
   },
 }

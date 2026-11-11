@@ -2,6 +2,7 @@
 import mongoose from 'mongoose'
 import { CustomError } from '../errors/CustomError.js'
 import { ERROR_DICTIONARY } from '../errors/error.dictionary.js'
+import { logger } from '../logger/logger.js'
 
 export const errorMiddleware = (error, req, res, next) => {
   let statusCode = 500
@@ -55,9 +56,15 @@ export const errorMiddleware = (error, req, res, next) => {
     message = ERROR_DICTIONARY.DATABASE_ERROR.message
   }
 
-  // Registrar errores inesperados del servidor.
+  // Registrar errores según su importancia.
   if (statusCode >= 500) {
-    console.error('[ERROR]', error)
+    logger.error(
+      `${req.method} ${req.originalUrl} - ${code}: ${error.stack || error.message}`,
+    )
+  } else {
+    logger.warning(
+      `${req.method} ${req.originalUrl} - ${code}: ${message}`,
+    )
   }
 
   const response = {

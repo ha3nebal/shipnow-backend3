@@ -4,6 +4,7 @@ import { mocksRepository } from '../repositories/mocks.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
 import { ORDER_STATUS } from '../constants/index.js'
 import { CustomError } from '../errors/CustomError.js'
+import { logger } from '../logger/logger.js'
 
 const validateQty = (qty) => {
   const parsedQty = Number(qty)
@@ -25,8 +26,13 @@ export const mocksService = {
     const count = validateQty(qty)
 
     try {
-      return mockGenerator.generateUsers(count)
+      const users = mockGenerator.generateUsers(count)
+
+      logger.info(`Generación de ${users.length} usuarios ficticios completada`)
+
+      return users
     } catch (error) {
+      logger.error(`Error al generar usuarios ficticios: ${error.message}`)
       throw new CustomError('MOCK_GENERATION_FAILED')
     }
   },
@@ -43,14 +49,19 @@ export const mocksService = {
         throw new CustomError('NO_STORES')
       }
 
-      return mockGenerator.generateOrders({
+      const orders = mockGenerator.generateOrders({
         qty: count,
         users,
         stores,
       })
+
+      logger.info(`Generación de ${orders.length} pedidos ficticios completada`)
+
+      return orders
     } catch (error) {
       if (error instanceof CustomError) throw error
 
+      logger.error(`Error al generar pedidos ficticios: ${error.message}`)
       throw new CustomError('MOCK_GENERATION_FAILED')
     }
   },
@@ -77,16 +88,21 @@ export const mocksService = {
         status: ORDER_STATUS.PENDING,
       }))
 
-      return mockGenerator.generateDeliveries({
+      const deliveries = mockGenerator.generateDeliveries({
         orders,
         drivers,
       }).map((delivery) => ({
         ...delivery,
         status: ORDER_STATUS.PENDING,
       }))
+
+      logger.info(`Generación de ${deliveries.length} entregas ficticias completada`)
+
+      return deliveries
     } catch (error) {
       if (error instanceof CustomError) throw error
 
+      logger.error(`Error al generar entregas ficticias: ${error.message}`)
       throw new CustomError('MOCK_GENERATION_FAILED')
     }
   },
@@ -141,6 +157,10 @@ export const mocksService = {
         orders.length +
         deliveries.length
 
+      logger.info(
+        `Seed completado: ${totalInsertados} registros insertados en MongoDB`,
+      )
+
       return {
         insertados: {
           usuarios: users.length,
@@ -158,6 +178,7 @@ export const mocksService = {
     } catch (error) {
       if (error instanceof CustomError) throw error
 
+      logger.error(`Error durante la ejecución del Seed: ${error.message}`)
       throw new CustomError('MOCK_SEED_FAILED')
     }
   },

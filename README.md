@@ -2,7 +2,7 @@
 
 API backend para la gestión de usuarios, tiendas, productos, pedidos y
 entregas de ShipNow. Está desarrollado con Node.js, Express y MongoDB
-mediante Mongoose, con una arquitectura por capas.
+mediante Mongoose, utilizando una arquitectura por capas.
 
 ## Tecnologías
 
@@ -11,6 +11,8 @@ mediante Mongoose, con una arquitectura por capas.
 -   MongoDB
 -   Mongoose
 -   dotenv
+-   Winston
+-   winston-daily-rotate-file
 
 ## Requisitos
 
@@ -45,11 +47,20 @@ mediante Mongoose, con una arquitectura por capas.
     Reemplazar los valores de ejemplo por los de tu entorno. No
     compartir ni subir `.env` al repositorio.
 
-4.  Iniciar el servidor:
+4.  Iniciar el servidor en desarrollo:
 
     ``` bash
     npm run dev
     ```
+
+5.  Iniciar el servidor en modo normal:
+
+    ``` bash
+    npm start
+    ```
+
+La API queda disponible en `http://localhost:8080`, siempre que el
+puerto configurado en `PORT` sea 8080.
 
 ## Estructura del proyecto
 
@@ -59,23 +70,32 @@ src/
 ├── config/
 ├── constants/
 ├── controllers/
+│   ├── logger.controller.js
+│   └── ...
 ├── errors/
 │   ├── CustomError.js
 │   └── error.dictionary.js
+├── logger/
+│   └── logger.js
 ├── middlewares/
 │   └── error.middleware.js
 ├── models/
 ├── repositories/
 ├── routes/
+│   ├── logger.router.js
+│   └── ...
 ├── services/
 └── utils/
 ```
 
 -   **config/**: configuración y variables de entorno.
 -   **constants/**: constantes compartidas, como estados y roles.
--   **controllers/**: reciben solicitudes HTTP y coordinan respuestas.
+-   **controllers/**: reciben solicitudes HTTP y coordinan las
+    respuestas.
 -   **errors/**: clase `CustomError` y diccionario centralizado de
     errores.
+-   **logger/**: configuración centralizada de Winston y sus
+    transportes.
 -   **middlewares/**: middleware global de manejo de errores.
 -   **models/**: esquemas y modelos de Mongoose.
 -   **repositories/**: acceso a la base de datos.
@@ -119,7 +139,7 @@ Ejemplo de error de validación:
   "details": [
     {
       "field": "price",
-      "message": "Path `price` (-100) is less than minimum allowed value (0)."
+      "message": "El precio no cumple la validación del modelo."
     }
   ]
 }
@@ -186,9 +206,143 @@ Ejemplo de error de validación:
                                                              clasificado.
   --------------------------------------------------------------------------------
 
-Los errores internos se registran en la consola del servidor. La
-respuesta al cliente utiliza un mensaje genérico para no exponer
-detalles internos.
+Los errores internos se registran en el sistema de logging. La respuesta
+al cliente utiliza un mensaje genérico para no exponer detalles
+internos.
+
+## Logging y monitoreo con Winston
+
+El proyecto utiliza **Winston** como sistema centralizado de logging y
+**winston-daily-rotate-file** para persistir los registros en archivos
+con rotación diaria. La configuración se encuentra en
+`src/logger/logger.js`.
+
+### Niveles personalizados
+
+Se definieron seis niveles, ordenados por prioridad:
+
+  ------------------------------------------------------------------------
+  Nivel                                    Prioridad Uso
+  --------------------- ---------------------------- ---------------------
+  `fatal`                                          0 Fallas críticas que
+                                                     impiden continuar,
+                                                     por ejemplo, una
+                                                     conexión inicial
+                                                     fallida a MongoDB.
+
+  `error`                                          1 Errores de servidor y
+                                                     operaciones fallidas.
+
+  `warning`                                        2 Situaciones esperadas
+                                                     pero anómalas, como
+                                                     recursos inexistentes
+                                                     o solicitudes
+                                                     inválidas.
+
+  `info`                                           3 Eventos relevantes de
+                                                     funcionamiento y
+                                                     operaciones exitosas.
+
+  `http`                                           4 Información asociada
+                                                     a solicitudes HTTP.
+
+  `debug`                                          5 Información detallada
+                                                     útil durante el
+                                                     desarrollo.
+  ------------------------------------------------------------------------
+
+### Comportamiento por entorno
+
+El nivel de salida de la consola depende de `NODE_ENV`:
+
+-   **development:** muestra los seis niveles (`debug`, `http`, `info`,
+    `warning`, `error` y `fatal`).
+-   **production:** muestra desde `info` hasta `fatal`; los niveles
+    `debug` y `http` no se imprimen en consola.
+
+Los archivos de aplicación registran todos los niveles desde `debug`,
+independientemente del entorno. El archivo específico de errores
+registra `error` y `fatal`.
+
+### Archivos de logs y rotación
+
+Los registros se guardan en la carpeta `logs/`, ubicada en la raíz del
+proyecto:
+
+``` text
+logs/
+├── application-YYYY-MM-DD.log
+└── error-YYYY-MM-DD.log
+```
+
+-   `application-YYYY-MM-DD.log`: almacena todos los niveles.
+-   `error-YYYY-MM-DD.log`: almacena únicamente los niveles `error` y
+    `fatal`.
+
+La configuración de rotación utiliza:
+
+-   Rotación diaria (`YYYY-MM-DD`).
+-   Tamaño máximo de archivo: `10m`.
+-   Retención del archivo general: `14d`.
+-   Retención del archivo de errores: `30d`.
+
+Winston puede crear archivos `.audit.json` para mantener el estado de la
+rotación. Estos archivos son internos del transporte de rotación.
+
+La carpeta `logs/`, los archivos `*.log` y `*.audit.json` están
+excluidos de Git mediante `.gitignore`. Por lo tanto, los registros
+locales no se suben al repositorio.
+
+### Endpoint de prueba de logging
+
+Se incorporó un endpoint para verificar los seis niveles personalizados:
+
+``` http
+GET http://localhost:8080/api/logger/test
+```
+
+Respuesta esperada:
+
+``` json
+{
+  "status": "success",
+  "message": "Prueba de los seis niveles de Winston ejecutada correctamente"
+}
+```
+
+Al ejecutar la solicitud, el controlador registra un mensaje de prueba
+por cada nivel:
+
+``` text
+Prueba del nivel DEBUG
+Prueba del nivel HTTP
+Prueba del nivel INFO
+Prueba del nivel WARNING
+Prueba del nivel ERROR
+Prueba del nivel FATAL
+```
+
+En desarrollo, los seis mensajes deben aparecer en consola. En
+producción, la consola debe mostrar solamente `info`, `warning`, `error`
+y `fatal`. Los seis niveles quedan registrados en el archivo general;
+`error` y `fatal` también se escriben en el archivo específico de
+errores.
+
+Este endpoint está destinado a verificar el funcionamiento del logger.
+
+### Integración del logger en la aplicación
+
+El logger centralizado se utiliza en los siguientes componentes:
+
+-   `src/app.js`: registra la conexión a MongoDB, el inicio del servidor
+    y una falla crítica de conexión.
+-   `src/middlewares/error.middleware.js`: registra los errores de las
+    solicitudes; utiliza `warning` para errores de cliente y `error`
+    para errores internos.
+-   `src/services/mocks.service.js`: registra la generación de datos
+    ficticios y la ejecución del seed.
+-   `src/services/orders.service.js`: registra la creación y entrega
+    exitosa de pedidos.
 
 ## Pruebas de errores con Postman
 
@@ -337,15 +491,19 @@ POST http://localhost:8080/api/mocks/seed
 ```
 
 Si no se envía una cantidad, `seed` utiliza el valor predeterminado de
-10. La ejecución de ejemplo inserta usuarios, conductores, pedidos y
-entregas. Esta operación modifica MongoDB; evitar repetirla
-innecesariamente.
+10. La ejecución inserta usuarios, conductores, pedidos y entregas. Esta
+operación modifica MongoDB; evitar repetirla innecesariamente.
 
 ## Consideraciones
 
 -   No subir `.env` ni credenciales al repositorio.
 -   No incluir `node_modules` en Git.
+-   No incluir `logs/`, archivos `*.log` ni archivos `*.audit.json` en
+    Git.
 -   Utilizar `.env.example` como referencia para configurar el entorno.
 -   Las solicitudes que crean registros y la operación `seed` modifican
     la base de datos. Utilizar datos de prueba y revisar la base antes
     de repetir operaciones.
+-   El endpoint `/api/logger/test` está destinado a comprobar el logger
+    y no debe considerarse una herramienta de monitoreo protegida para
+    producción.
