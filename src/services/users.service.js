@@ -2,6 +2,7 @@
 import { usersRepository } from '../repositories/users.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
 import { CustomError } from '../errors/CustomError.js'
+import { USER_ROLES } from '../constants/index.js'
 
 export const usersService = {
   createUser: async (data) => {
@@ -23,6 +24,7 @@ export const usersService = {
     return usersRepository.create({
       ...data,
       email,
+      role: USER_ROLES.CUSTOMER,
     })
   },
 

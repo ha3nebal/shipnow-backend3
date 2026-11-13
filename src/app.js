@@ -12,6 +12,9 @@ import { errorMiddleware } from './middlewares/error.middleware.js'
 import { logger } from './logger/logger.js'
 import loggerRouter from './routes/logger.router.js'
 
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './docs/swagger.js'
+
 const app = express()
 
 app.use(express.json())
@@ -24,6 +27,9 @@ try {
   logger.fatal('No fue posible conectar con MongoDB: %s', error.message)
   process.exit(1)
 }
+
+// Documentación interactiva de la API.
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // Rutas de la API.
 app.use('/api/orders', ordersRouter)

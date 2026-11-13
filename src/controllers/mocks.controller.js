@@ -46,9 +46,10 @@ export const mocksController = {
   },
 
   
+
   seed: async (req, res, next) => {
     try {
-      const qty = req.query.qty ?? 10
+      const qty = req.body?.qty ?? req.query.qty ?? 10
       const result = await mocksService.seed(qty)
 
       return res.status(201).json({
@@ -60,4 +61,5 @@ export const mocksController = {
       next(error)
     }
   },
+
 }
