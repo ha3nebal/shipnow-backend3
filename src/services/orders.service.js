@@ -8,6 +8,16 @@ import { logger } from '../logger/logger.js'
 
 export const ordersService = {
   createOrder: async (data) => {
+        // Validar los campos obligatorios antes de procesar el pedido.
+    if (
+      !data?.userId ||
+      !data?.storeId ||
+      !data?.address ||
+      !Array.isArray(data?.items) ||
+      data.items.length === 0
+    ) {
+      throw new CustomError('VALIDATION_ERROR')
+    }
     const user = await usersRepository.findById(data.userId)
 
     if (!user) {

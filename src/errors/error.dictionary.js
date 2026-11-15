@@ -87,4 +87,8 @@ export const ERROR_DICTIONARY = Object.freeze({
     statusCode: 500,
     message: 'Error interno del servidor',
   },
+  ROUTE_NOT_FOUND: {
+  statusCode: 404,
+  message: 'La ruta solicitada no existe',
+},
 })

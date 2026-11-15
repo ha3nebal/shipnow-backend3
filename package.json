@@ -3,8 +3,9 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/app.js",
-    "start": "node src/app.js"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "cross-env NODE_ENV=test mocha \"tests/**/*.test.js\""
   },
   "dependencies": {
     "dotenv": "^16.4.5",
@@ -14,5 +15,11 @@
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "chai": "^6.3.0",
+    "cross-env": "^10.1.0",
+    "mocha": "^12.0.3",
+    "supertest": "^7.3.2"
   }
 }
