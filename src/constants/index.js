@@ -25,3 +25,10 @@ export const ORDER_PRIORITY = Object.freeze({
   MEDIUM: 'medium',
   HIGH: 'high',
 })
+
+export const DOCUMENT_TYPES = Object.freeze({
+  IDENTITY: 'identity',
+  DRIVER_LICENSE: 'driver_license',
+  VEHICLE_REGISTRATION: 'vehicle_registration',
+  OTHER: 'other',
+})

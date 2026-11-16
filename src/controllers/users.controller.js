@@ -25,3 +25,21 @@ export const createStore = async (req, res, next) => {
     next(error)
   }
 }
+
+export const uploadUserDocument = async (req, res, next) => {
+  try {
+    const user = await usersService.uploadUserDocument(
+      req.params.id,
+      req.file,
+      req.body.documentType,
+    )
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Documento cargado correctamente',
+      payload: user,
+    })
+  } catch (error) {
+    next(error)
+  }
+}

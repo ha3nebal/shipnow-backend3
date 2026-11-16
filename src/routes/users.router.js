@@ -4,7 +4,9 @@ import {
   createUser,
   getUsers,
   createStore,
+  uploadUserDocument,
 } from '../controllers/users.controller.js'
+import { upload } from '../config/multer.config.js'
 
 const router = Router()
 
@@ -143,5 +145,81 @@ router.get('/', getUsers)
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/stores', createStore)
+
+// Carga de documentos asociados a un usuario.
+/**
+ * @swagger
+ * /api/users/{id}/documents:
+ *   post:
+ *     summary: Cargar documento de un usuario
+ *     description: Permite cargar un documento y asociarlo a un usuario existente. Se aceptan archivos PDF, JPG, JPEG y PNG de hasta 5 MB.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Identificador MongoDB del usuario.
+ *         schema:
+ *           type: string
+ *         example: 64f1a2b3c4d5e6f789012345
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - documentType
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Documento en formato PDF, JPG, JPEG o PNG.
+ *               documentType:
+ *                 type: string
+ *                 enum:
+ *                   - identity
+ *                   - driver_license
+ *                   - vehicle_registration
+ *                   - other
+ *                 description: Tipo de documento.
+ *     responses:
+ *       200:
+ *         description: Documento cargado correctamente.
+ *       400:
+ *         description: Archivo obligatorio, tipo de archivo o tipo de documento inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Usuario no encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       413:
+ *         description: El archivo supera el límite de 5 MB.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Error al guardar el documento.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post(
+  '/:id/documents',
+  (req, res, next) => {
+    req.uploadCategory = 'users'
+    next()
+  },
+  upload.single('file'),
+  uploadUserDocument,
+)
 
 export default router

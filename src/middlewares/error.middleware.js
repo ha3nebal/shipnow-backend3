@@ -17,6 +17,18 @@ export const errorMiddleware = (error, req, res, next) => {
     message = error.message
     details = error.details
   }
+  // Errores generados por Multer durante la carga de archivos.
+  else if (error.name === 'MulterError') {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      statusCode = ERROR_DICTIONARY.FILE_TOO_LARGE.statusCode
+      code = 'FILE_TOO_LARGE'
+      message = ERROR_DICTIONARY.FILE_TOO_LARGE.message
+    } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      statusCode = ERROR_DICTIONARY.INVALID_UPLOAD_FIELD.statusCode
+      code = 'INVALID_UPLOAD_FIELD'
+      message = ERROR_DICTIONARY.INVALID_UPLOAD_FIELD.message
+    }
+  }
 
   // Identificador de MongoDB con formato inválido.
   else if (error instanceof mongoose.Error.CastError) {

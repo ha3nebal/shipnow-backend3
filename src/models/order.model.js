@@ -2,6 +2,37 @@
 import mongoose from 'mongoose'
 import { ORDER_STATUS, ORDER_PRIORITY } from '../constants/index.js'
 
+// Esquema para almacenar los metadatos del comprobante.
+const receiptSchema = new mongoose.Schema(
+  {
+    originalName: {
+      type: String,
+      required: true,
+    },
+    generatedName: {
+      type: String,
+      required: true,
+    },
+    path: {
+      type: String,
+      required: true,
+    },
+    mimeType: {
+      type: String,
+      required: true,
+    },
+    size: {
+      type: Number,
+      required: true,
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false },
+)
+
 const orderSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +70,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: Object.values(ORDER_PRIORITY),
     default: ORDER_PRIORITY.MEDIUM,
+  },
+  receipt: {
+    type: receiptSchema,
+    default: null,
   },
 }, { timestamps: true })
 

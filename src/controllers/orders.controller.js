@@ -35,3 +35,20 @@ export const deliverOrder = async (req, res, next) => {
     next(error)
   }
 }
+
+export const uploadOrderReceipt = async (req, res, next) => {
+  try {
+    const order = await ordersService.uploadOrderReceipt(
+      req.params.id,
+      req.file,
+    )
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Comprobante cargado correctamente',
+      payload: order,
+    })
+  } catch (error) {
+    next(error)
+  }
+}

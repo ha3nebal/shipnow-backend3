@@ -14,3 +14,6 @@ logs/
 
 # Archivos de auditoría de rotación
 *.audit.json
+
+# Archivos cargados mediante Multer
+uploads/

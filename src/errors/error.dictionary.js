@@ -66,6 +66,32 @@ export const ERROR_DICTIONARY = Object.freeze({
     message: 'No fue posible insertar los datos de prueba',
   },
 
+  // Carga de archivos
+  FILE_REQUIRED: {
+    statusCode: 400,
+    message: 'Debe adjuntar un archivo',
+  },
+  INVALID_FILE_TYPE: {
+    statusCode: 400,
+    message: 'El tipo de archivo no está permitido',
+  },
+  FILE_TOO_LARGE: {
+    statusCode: 413,
+    message: 'El archivo supera el tamaño máximo permitido de 5 MB',
+  },
+  INVALID_UPLOAD_FIELD: {
+    statusCode: 400,
+    message: 'El campo del archivo enviado no es válido',
+  },
+  INVALID_DOCUMENT_TYPE: {
+    statusCode: 400,
+    message: 'El tipo de documento no es válido',
+  },
+  UPLOAD_SAVE_FAILED: {
+    statusCode: 500,
+    message: 'No fue posible guardar el archivo',
+  },
+
   // Errores generales
   INVALID_ID: {
     statusCode: 400,
@@ -87,8 +113,8 @@ export const ERROR_DICTIONARY = Object.freeze({
     statusCode: 500,
     message: 'Error interno del servidor',
   },
-  ROUTE_NOT_FOUND: {
-  statusCode: 404,
-  message: 'La ruta solicitada no existe',
-},
+    ROUTE_NOT_FOUND: {
+    statusCode: 404,
+    message: 'La ruta solicitada no existe',
+  },
 })

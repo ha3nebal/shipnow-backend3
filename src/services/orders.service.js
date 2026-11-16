@@ -1,10 +1,23 @@
 
+import { unlink } from 'node:fs/promises'
 import { ordersRepository } from '../repositories/orders.repository.js'
 import { usersRepository } from '../repositories/users.repository.js'
 import { storesRepository } from '../repositories/stores.repository.js'
 import { ORDER_STATUS } from '../constants/index.js'
 import { CustomError } from '../errors/CustomError.js'
 import { logger } from '../logger/logger.js'
+
+const removeUploadedFile = async (file) => {
+  if (!file?.path) return
+
+  try {
+    await unlink(file.path)
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error
+    }
+  }
+}
 
 export const ordersService = {
   createOrder: async (data) => {
@@ -77,5 +90,52 @@ export const ordersService = {
     logger.info(`Pedido entregado correctamente: ${id}`)
 
     return updatedOrder
+  },
+  uploadOrderReceipt: async (id, file) => {
+    try {
+      // Comprobar que se haya adjuntado un archivo.
+      if (!file) {
+        throw new CustomError('FILE_REQUIRED')
+      }
+
+      // Comprobar que el pedido exista.
+      const order = await ordersRepository.findById(id)
+
+      if (!order) {
+        throw new CustomError('ORDER_NOT_FOUND')
+      }
+
+      // Preparar los metadatos del comprobante.
+      const receipt = {
+        originalName: file.originalname,
+        generatedName: file.filename,
+        path: file.path.replace(/\\/g, '/'),
+        mimeType: file.mimetype,
+        size: file.size,
+        uploadedAt: new Date(),
+      }
+
+      // Guardar los metadatos en MongoDB.
+      const updatedOrder = await ordersRepository.addReceipt(id, receipt)
+
+      if (!updatedOrder) {
+        throw new CustomError('ORDER_NOT_FOUND')
+      }
+
+      logger.info(`Comprobante asociado correctamente al pedido ${id}`)
+
+      return updatedOrder
+    } catch (error) {
+      // Eliminar el archivo si falló alguna operación.
+      try {
+        await removeUploadedFile(file)
+      } catch (cleanupError) {
+        logger.error(
+          `No se pudo eliminar el archivo ${file?.path}: ${cleanupError.message}`,
+        )
+      }
+
+      throw error
+    }
   },
 }

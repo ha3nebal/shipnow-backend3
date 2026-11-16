@@ -1,11 +1,12 @@
-
 import { Router } from 'express'
 import {
   createOrder,
   getOrders,
   getOrderById,
   deliverOrder,
+  uploadOrderReceipt,
 } from '../controllers/orders.controller.js'
+import { upload } from '../config/multer.config.js'
 
 const router = Router()
 
@@ -199,5 +200,72 @@ router.get('/:id', getOrderById)
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch('/:id/deliver', deliverOrder)
+
+// Carga de comprobantes asociados a un pedido.
+/**
+ * @swagger
+ * /api/orders/{id}/receipt:
+ *   post:
+ *     summary: Cargar comprobante de un pedido
+ *     description: Recibe un archivo y lo asocia a un pedido existente. Se permiten archivos PDF, JPG, JPEG y PNG de hasta 5 MB.
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Identificador MongoDB del pedido.
+ *         schema:
+ *           type: string
+ *         example: 64f1a2b3c4d5e6f789012345
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Comprobante en formato PDF, JPG, JPEG o PNG.
+ *     responses:
+ *       200:
+ *         description: Comprobante cargado y asociado correctamente.
+ *       400:
+ *         description: Archivo obligatorio o tipo de archivo no permitido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Pedido no encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       413:
+ *         description: El archivo supera el límite de 5 MB.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Error al guardar el comprobante.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post(
+  '/:id/receipt',
+  (req, res, next) => {
+    req.uploadCategory = 'orders'
+    next()
+  },
+  upload.single('file'),
+  uploadOrderReceipt,
+)
 
 export default router

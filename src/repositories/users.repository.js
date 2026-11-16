@@ -9,5 +9,12 @@ export const usersRepository = {
   findByEmail: (email) =>
     UserModel.findOne({ email }).lean(),
 
+  addDocument: (id, document) =>
+    UserModel.findByIdAndUpdate(
+      id,
+      { $push: { documents: document } },
+      { new: true, runValidators: true },
+    ).lean(),
+
   findAll: () => UserModel.find().lean(),
 }
