@@ -9,14 +9,21 @@ export const createOrder = async (req, res, next) => {
   }
 }
 
+
 export const getOrders = async (req, res, next) => {
   try {
-    const orders = await ordersService.getOrders()
-    res.json({ status: 'success', payload: orders })
+    const result = await ordersService.getOrders(req.query)
+
+    res.status(200).json({
+      status: 'success',
+      payload: result.orders,
+      pagination: result.pagination,
+    })
   } catch (error) {
     next(error)
   }
 }
+
 
 export const getOrderById = async (req, res, next) => {
   try {

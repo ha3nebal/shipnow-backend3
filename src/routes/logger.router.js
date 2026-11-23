@@ -6,14 +6,14 @@ const router = Router()
 
 /**
  * @swagger
- * /api/logger/test:
+ * /api/loggerTest:
  *   get:
  *     summary: Probar los niveles de Winston
- *     description: Ejecuta una prueba de los seis niveles de registro de Winston (debug, http, info, warning, error y fatal). Este endpoint es una herramienta de validación técnica del sistema de logs y no representa una funcionalidad de negocio.
+ *     description: Ejecuta una prueba de los seis niveles de registro de Winston. Herramienta de validación técnica del sistema de logs.
  *     tags: [Logger]
  *     responses:
  *       200:
- *         description: Prueba de los seis niveles de Winston ejecutada correctamente.
+ *         description: Prueba de los seis niveles ejecutada correctamente.
  *         content:
  *           application/json:
  *             schema:
@@ -30,6 +30,6 @@ const router = Router()
  *                   example: Prueba de los seis niveles de Winston ejecutada correctamente
  */
 
-router.get('/test', testLogger)
+router.get('/', testLogger)
 
 export default router

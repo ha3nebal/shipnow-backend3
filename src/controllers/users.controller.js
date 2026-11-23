@@ -9,13 +9,21 @@ export const createUser = async (req, res, next) => {
   }
 }
 
+
 export const getUsers = async (req, res, next) => {
   try {
-    res.json({ status: 'success', payload: await usersService.getUsers() })
+    const result = await usersService.getUsers(req.query)
+
+    res.status(200).json({
+      status: 'success',
+      payload: result.users,
+      pagination: result.pagination,
+    })
   } catch (error) {
     next(error)
   }
 }
+
 
 export const createStore = async (req, res, next) => {
   try {

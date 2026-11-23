@@ -1,26 +1,29 @@
 # ShipNow Backend
 
 API backend para la gestión de usuarios, tiendas, productos, pedidos y
-entregas de ShipNow. Está desarrollado con Node.js, Express y MongoDB
-mediante Mongoose, utilizando una arquitectura por capas.
+entregas de ShipNow. Desarrollado con Node.js, Express y MongoDB
+mediante Mongoose, con arquitectura por capas.
+
+Repositorio: https://github.com/ha3nebal/shipnow-backend3
 
 ## Tecnologías
 
--   Node.js
--   Express
--   MongoDB
--   Mongoose
--   Multer para carga y almacenamiento de archivos
--   dotenv
--   Winston
--   winston-daily-rotate-file
+-   Node.js y Express
+-   MongoDB y Mongoose
+-   Multer para carga de archivos
+-   dotenv para variables de entorno
+-   Winston y winston-daily-rotate-file para logging
+-   Swagger UI para documentación de la API
+-   Mocha y Chai para pruebas automatizadas
+-   Docker para ejecución en contenedores
 
 ## Requisitos
 
 -   Node.js y npm.
--   Una instancia de MongoDB local o una base de datos en MongoDB Atlas.
+-   MongoDB local o MongoDB Atlas.
+-   Docker Desktop, si se desea ejecutar la aplicación en un contenedor.
 
-## Instalación y ejecución
+## Instalación y ejecución local
 
 1.  Clonar el repositorio:
 
@@ -35,45 +38,71 @@ mediante Mongoose, utilizando una arquitectura por capas.
     npm install
     ```
 
-3.  Crear un archivo `.env` en la raíz, tomando como referencia
-    `.env.example`:
+3.  Crear `.env` en la raíz, tomando como referencia `.env.example`:
 
     ``` env
     PORT=8080
-    MONGODB_URI=tu_uri_de_mongodb
-    JWT_SECRET=tu_clave_secreta
+    MONGODB_URI=mongodb://127.0.0.1:27017/shipnow
     NODE_ENV=development
+    LOG_LEVEL=debug
+    UPLOADS_DIR=./uploads
     ```
 
-    Reemplazar los valores de ejemplo por los de tu entorno. No
-    compartir ni subir `.env` al repositorio.
+    Ajustar `MONGODB_URI` según la instancia local o MongoDB Atlas
+    utilizada.
 
-4.  Iniciar el servidor en desarrollo:
+      -----------------------------------------------------------------------
+      Variable                            Descripción
+      ----------------------------------- -----------------------------------
+      `PORT`                              Puerto del servidor.
+
+      `MONGODB_URI`                       Cadena de conexión a MongoDB.
+
+      `NODE_ENV`                          Entorno: `development`, `test` o
+                                          `production`.
+
+      `LOG_LEVEL`                         Nivel de logging: `fatal`, `error`,
+                                          `warning`, `info`, `http` o
+                                          `debug`.
+
+      `UPLOADS_DIR`                       Directorio de almacenamiento de
+                                          archivos.
+      -----------------------------------------------------------------------
+
+    `PORT`, `MONGODB_URI` y `NODE_ENV` son obligatorias. `LOG_LEVEL` y
+    `UPLOADS_DIR` tienen valores predeterminados si no se configuran. En
+    producción, las variables se deben proporcionar desde el entorno de
+    despliegue. No subir ni compartir `.env`.
+
+4.  Iniciar en desarrollo:
 
     ``` bash
     npm run dev
     ```
 
-5.  Iniciar el servidor en modo normal:
+5.  Iniciar en modo normal:
 
     ``` bash
     npm start
     ```
 
-La API queda disponible en `http://localhost:8080`, siempre que el
-puerto configurado en `PORT` sea 8080.
+La API queda disponible en `http://localhost:8080` cuando `PORT=8080`.
 
-## Estructura del proyecto
+## Arquitectura y estructura
+
+La aplicación utiliza una arquitectura por capas. Las rutas reciben
+solicitudes HTTP, los controladores coordinan la interacción HTTP, los
+servicios contienen reglas de negocio y los repositorios encapsulan el
+acceso a MongoDB.
 
 ``` text
 src/
 ├── app.js
 ├── config/
+│   ├── env.config.js
 │   └── multer.config.js
 ├── constants/
 ├── controllers/
-│   ├── logger.controller.js
-│   └── ...
 ├── errors/
 │   ├── CustomError.js
 │   └── error.dictionary.js
@@ -84,38 +113,84 @@ src/
 ├── models/
 ├── repositories/
 ├── routes/
-│   ├── logger.router.js
-│   └── ...
 ├── services/
 └── utils/
 ```
 
--   **config/**: configuración y variables de entorno, incluida la configuración centralizada de Multer.
+-   **config/**: configuración general, validación de variables de
+    entorno y Multer.
 -   **constants/**: constantes compartidas, como estados y roles.
--   **controllers/**: reciben solicitudes HTTP y coordinan las
-    respuestas.
+-   **controllers/**: reciben solicitudes HTTP, llaman a servicios y
+    construyen respuestas.
 -   **errors/**: clase `CustomError` y diccionario centralizado de
     errores.
--   **logger/**: configuración centralizada de Winston y sus
-    transportes.
--   **middlewares/**: middleware global de manejo de errores.
+-   **logger/**: configuración de Winston y sus transportes.
+-   **middlewares/**: manejo global de errores y procesos transversales.
 -   **models/**: esquemas y modelos de Mongoose.
--   **repositories/**: acceso a la base de datos.
+-   **repositories/**: consultas y operaciones de persistencia.
 -   **routes/**: definición de endpoints.
 -   **services/**: lógica de negocio y validaciones.
 -   **utils/**: funciones auxiliares y generación de datos de prueba.
 
+### Diferencia entre Service y Repository
+
+-   **Service:** aplica reglas de negocio, valida parámetros y coordina
+    operaciones. Por ejemplo, `orders.service.js` valida los parámetros
+    de consulta antes de solicitar los pedidos.
+-   **Repository:** realiza consultas y operaciones de persistencia. Por
+    ejemplo, `orders.repository.js` consulta `OrderModel`, aplica
+    filtros, ordenamiento y paginación.
+
+Flujo general:
+
+``` text
+Cliente HTTP → Route → Controller → Service → Repository → Model → MongoDB
+```
+
+Los controladores no deben concentrar consultas directas a MongoDB ni
+reglas de negocio.
+
+## Documentación Swagger
+
+Swagger UI permite consultar los endpoints, parámetros, cuerpos de
+solicitud y respuestas documentadas.
+
+-   URL local: `http://localhost:8080/api/docs/`
+-   `/api/docs` redirige a `/api/docs/`.
+-   Swagger está habilitado fuera del entorno de producción.
+
+## Health check
+
+``` http
+GET http://localhost:8080/api/health
+```
+
+Respuesta de ejemplo:
+
+``` json
+{
+  "status": "success",
+  "data": {
+    "status": "ok",
+    "environment": "development",
+    "uptime": 66.88,
+    "timestamp": "2026-11-23T03:59:37.267Z"
+  }
+}
+```
+
+Informa el estado de la API, el entorno, el tiempo de actividad y la
+fecha de consulta. No debe incluir credenciales ni cadenas de conexión.
+
 ## Manejo centralizado de errores
 
-Los servicios detectan situaciones inválidas y pueden lanzar una
-instancia de `CustomError` utilizando un código definido en
-`src/errors/error.dictionary.js`.
+Los servicios pueden lanzar `CustomError` utilizando códigos definidos
+en `src/errors/error.dictionary.js`. Los controladores delegan los
+errores mediante `next(error)`. El middleware global `errorMiddleware`,
+registrado después de las rutas en `src/app.js`, determina el estado
+HTTP y construye la respuesta.
 
-Los controladores delegan los errores mediante `next(error)`. El
-middleware global `errorMiddleware`, registrado después de las rutas en
-`src/app.js`, determina el código HTTP y construye la respuesta.
-
-### Formato de respuesta
+Formato general:
 
 ``` json
 {
@@ -127,11 +202,11 @@ middleware global `errorMiddleware`, registrado después de las rutas en
 
 -   `status`: indica que la operación produjo un error.
 -   `message`: descripción del problema.
--   `code`: código identificador definido por la aplicación.
--   `details` (opcional): información adicional, por ejemplo, los campos
-    que no superaron las validaciones de Mongoose.
+-   `code`: identificador del error.
+-   `details` (opcional): información adicional, por ejemplo, errores de
+    validación de Mongoose.
 
-Ejemplo de error de validación:
+Ejemplo de validación:
 
 ``` json
 {
@@ -153,12 +228,11 @@ Ejemplo de error de validación:
   Código                                                HTTP Situación
   ----------------------------- ---------------------------- ---------------------
   `EMAIL_REQUIRED`                                       400 No se proporcionó el
-                                                             correo electrónico
-                                                             requerido.
+                                                             correo requerido.
 
-  `INVALID_MOCK_QTY`                                     400 La cantidad de mocks
-                                                             no es un entero entre
-                                                             1 y 100.
+  `INVALID_MOCK_QTY`                                     400 Cantidad de mocks
+                                                             fuera del rango
+                                                             entero de 1 a 100.
 
   `INVALID_PRODUCT_STATUS`                               400 Estado de producto no
                                                              permitido.
@@ -170,31 +244,43 @@ Ejemplo de error de validación:
                                                              formato no válido
                                                              para Mongoose.
 
-  `VALIDATION_ERROR`                                     400 Los datos no cumplen
+  `VALIDATION_ERROR`                                     400 Datos que no cumplen
                                                              las validaciones del
                                                              esquema.
 
-  `ORDER_NOT_FOUND`                                      404 No se encontró el
-                                                             pedido.
+  `FILE_REQUIRED`                                        400 No se adjuntó un
+                                                             archivo.
 
-  `PRODUCT_NOT_FOUND`                                    404 No se encontró el
-                                                             producto.
+  `INVALID_FILE_TYPE`                                    400 Formato o combinación
+                                                             MIME/extensión no
+                                                             permitida.
 
-  `USER_NOT_FOUND`                                       404 No se encontró el
-                                                             usuario.
+  `INVALID_UPLOAD_FIELD`                                 400 Campo de archivo
+                                                             distinto de `file`.
 
-  `STORE_NOT_FOUND`                                      404 No se encontró la
-                                                             tienda.
+  `INVALID_DOCUMENT_TYPE`                                400 Tipo de documento no
+                                                             permitido.
 
-  `USER_EMAIL_ALREADY_EXISTS`                            409 El correo electrónico
-                                                             ya está registrado.
+  `ORDER_NOT_FOUND`                                      404 Pedido inexistente.
 
-  `DUPLICATE_RESOURCE`                                   409 Se intentó crear un
-                                                             recurso duplicado.
+  `PRODUCT_NOT_FOUND`                                    404 Producto inexistente.
 
-  `DATABASE_ERROR`                                       500 Error en una
-                                                             operación de base de
-                                                             datos.
+  `USER_NOT_FOUND`                                       404 Usuario inexistente.
+
+  `STORE_NOT_FOUND`                                      404 Tienda inexistente.
+
+  `ROUTE_NOT_FOUND`                                      404 Ruta inexistente.
+
+  `USER_EMAIL_ALREADY_EXISTS`                            409 Correo electrónico ya
+                                                             registrado.
+
+  `DUPLICATE_RESOURCE`                                   409 Recurso duplicado.
+
+  `FILE_TOO_LARGE`                                       413 Archivo superior a 5
+                                                             MB.
+
+  `DATABASE_ERROR`                                       500 Error en operación de
+                                                             base de datos.
 
   `MOCK_GENERATION_FAILED`                               500 No fue posible
                                                              generar datos de
@@ -204,24 +290,59 @@ Ejemplo de error de validación:
                                                              insertar datos de
                                                              prueba.
 
+  `UPLOAD_SAVE_FAILED`                                   500 No fue posible
+                                                             guardar el archivo.
+
   `INTERNAL_ERROR`                                       500 Error interno no
                                                              clasificado.
   --------------------------------------------------------------------------------
 
 Los errores internos se registran en el sistema de logging. La respuesta
-al cliente utiliza un mensaje genérico para no exponer detalles
-internos.
+al cliente utiliza mensajes genéricos para no exponer detalles internos.
+El JSON malformado se responde como HTTP 400 y las rutas inexistentes
+como HTTP 404 en formato JSON.
+
+## Paginación y filtros
+
+Los listados de usuarios y pedidos admiten paginación. El límite máximo
+documentado es 100 registros por solicitud.
+
+### Usuarios
+
+``` http
+GET http://localhost:8080/api/users?page=1&limit=10
+GET http://localhost:8080/api/users?page=1&limit=10&role=customer
+```
+
+Parámetros: - `page`: número de página, entero positivo. - `limit`:
+cantidad de registros, entre 1 y 100. - `role`: filtro opcional por rol
+permitido.
+
+La respuesta incluye `payload` y `pagination` con total de usuarios,
+páginas, página actual y límite. El listado excluye el arreglo
+`documents` para reducir el tamaño de la respuesta.
+
+### Pedidos
+
+``` http
+GET http://localhost:8080/api/orders?page=1&limit=10
+GET http://localhost:8080/api/orders?page=1&limit=10&status=pending&priority=high
+```
+
+Parámetros: - `page`: número de página, entero positivo. - `limit`:
+cantidad de registros, entre 1 y 100. - `status`: filtro opcional por
+estado permitido. - `priority`: filtro opcional por prioridad permitida.
+
+La respuesta incluye `payload` y `pagination`. Los pedidos se ordenan
+por fecha de creación descendente.
 
 ## Logging y monitoreo con Winston
 
 El proyecto utiliza **Winston** como sistema centralizado de logging y
-**winston-daily-rotate-file** para persistir los registros en archivos
-con rotación diaria. La configuración se encuentra en
-`src/logger/logger.js`.
+**winston-daily-rotate-file** para persistir registros con rotación
+diaria. La configuración se encuentra en `src/logger/logger.js`.
 
 ### Niveles personalizados
-
-Se definieron seis niveles, ordenados por prioridad:
 
   ------------------------------------------------------------------------
   Nivel                                    Prioridad Uso
@@ -235,14 +356,13 @@ Se definieron seis niveles, ordenados por prioridad:
   `error`                                          1 Errores de servidor y
                                                      operaciones fallidas.
 
-  `warning`                                        2 Situaciones esperadas
-                                                     pero anómalas, como
-                                                     recursos inexistentes
-                                                     o solicitudes
+  `warning`                                        2 Situaciones anómalas,
+                                                     como recursos
+                                                     inexistentes o
+                                                     solicitudes
                                                      inválidas.
 
-  `info`                                           3 Eventos relevantes de
-                                                     funcionamiento y
+  `info`                                           3 Eventos relevantes y
                                                      operaciones exitosas.
 
   `http`                                           4 Información asociada
@@ -255,21 +375,14 @@ Se definieron seis niveles, ordenados por prioridad:
 
 ### Comportamiento por entorno
 
-El nivel de salida de la consola depende de `NODE_ENV`:
-
--   **development:** muestra los seis niveles (`debug`, `http`, `info`,
-    `warning`, `error` y `fatal`).
--   **production:** muestra desde `info` hasta `fatal`; los niveles
-    `debug` y `http` no se imprimen en consola.
-
-Los archivos de aplicación registran todos los niveles desde `debug`,
-independientemente del entorno. El archivo específico de errores
+`LOG_LEVEL` selecciona el nivel de Winston. Su valor predeterminado es
+`debug` en desarrollo e `info` en otros entornos. Los archivos de
+aplicación registran desde `debug`; el archivo específico de errores
 registra `error` y `fatal`.
 
-### Archivos de logs y rotación
+### Archivos y rotación
 
-Los registros se guardan en la carpeta `logs/`, ubicada en la raíz del
-proyecto:
+Los registros se guardan en `logs/`:
 
 ``` text
 logs/
@@ -277,30 +390,21 @@ logs/
 └── error-YYYY-MM-DD.log
 ```
 
--   `application-YYYY-MM-DD.log`: almacena todos los niveles.
--   `error-YYYY-MM-DD.log`: almacena únicamente los niveles `error` y
-    `fatal`.
-
-La configuración de rotación utiliza:
-
--   Rotación diaria (`YYYY-MM-DD`).
--   Tamaño máximo de archivo: `10m`.
--   Retención del archivo general: `14d`.
--   Retención del archivo de errores: `30d`.
+-   `application-YYYY-MM-DD.log`: todos los niveles.
+-   `error-YYYY-MM-DD.log`: niveles `error` y `fatal`.
+-   Rotación diaria.
+-   Tamaño máximo: `10m`.
+-   Retención general: `14d`.
+-   Retención de errores: `30d`.
 
 Winston puede crear archivos `.audit.json` para mantener el estado de la
-rotación. Estos archivos son internos del transporte de rotación.
+rotación. `logs/`, `*.log` y `*.audit.json` están excluidos de Git
+mediante `.gitignore`.
 
-La carpeta `logs/`, los archivos `*.log` y `*.audit.json` están
-excluidos de Git mediante `.gitignore`. Por lo tanto, los registros
-locales no se suben al repositorio.
-
-### Endpoint de prueba de logging
-
-Se incorporó un endpoint para verificar los seis niveles personalizados:
+### Endpoint de prueba del logger
 
 ``` http
-GET http://localhost:8080/api/logger/test
+GET http://localhost:8080/api/loggerTest
 ```
 
 Respuesta esperada:
@@ -312,48 +416,37 @@ Respuesta esperada:
 }
 ```
 
-Al ejecutar la solicitud, el controlador registra un mensaje de prueba
-por cada nivel:
+El endpoint registra mensajes de prueba de `debug`, `http`, `info`,
+`warning`, `error` y `fatal`. Está destinado a pruebas y solo se monta
+fuera de producción.
 
-``` text
-Prueba del nivel DEBUG
-Prueba del nivel HTTP
-Prueba del nivel INFO
-Prueba del nivel WARNING
-Prueba del nivel ERROR
-Prueba del nivel FATAL
+El logger también se utiliza en el servidor, el middleware global de
+errores y servicios como mocks y pedidos.
+
+## Pruebas automatizadas
+
+Ejecutar la suite con:
+
+``` bash
+npm test
 ```
 
-En desarrollo, los seis mensajes deben aparecer en consola. En
-producción, la consola debe mostrar solamente `info`, `warning`, `error`
-y `fatal`. Los seis niveles quedan registrados en el archivo general;
-`error` y `fatal` también se escriben en el archivo específico de
-errores.
+La suite cubre, entre otros aspectos: - Health check y endpoint de
+logging. - Listado, paginación y filtros de usuarios. - Creación y carga
+de documentos de usuarios. - Listado, paginación y filtros de pedidos. -
+Consulta de pedidos por identificador y entrega. - Carga de
+comprobantes, validaciones y limpieza de archivos ante fallos.
 
-Este endpoint está destinado a verificar el funcionamiento del logger.
-
-### Integración del logger en la aplicación
-
-El logger centralizado se utiliza en los siguientes componentes:
-
--   `src/app.js`: registra la conexión a MongoDB, el inicio del servidor
-    y una falla crítica de conexión.
--   `src/middlewares/error.middleware.js`: registra los errores de las
-    solicitudes; utiliza `warning` para errores de cliente y `error`
-    para errores internos.
--   `src/services/mocks.service.js`: registra la generación de datos
-    ficticios y la ejecución del seed.
--   `src/services/orders.service.js`: registra la creación y entrega
-    exitosa de pedidos.
+**En la última ejecución registrada durante la preparación de esta
+entrega se aprobaron 53 pruebas.** Ejecutar `npm test` nuevamente
+después de cualquier modificación para confirmar el resultado vigente.
 
 ## Pruebas de errores con Postman
 
-Con el servidor en ejecución en `http://localhost:8080`, se pueden
-reproducir estos casos.
+Con el servidor activo en `http://localhost:8080`, se pueden reproducir
+los siguientes casos.
 
 ### Mocks: cantidades inválidas
-
-El parámetro `qty` admite únicamente enteros entre 1 y 100. Probar:
 
 ``` http
 GET http://localhost:8080/api/mocks/users?qty=-2
@@ -362,71 +455,39 @@ GET http://localhost:8080/api/mocks/users?qty=2.5
 GET http://localhost:8080/api/mocks/users?qty=150
 ```
 
-En todos los casos se espera HTTP `400 Bad Request` y el código
-`INVALID_MOCK_QTY`.
+Se espera HTTP `400` y `INVALID_MOCK_QTY`.
 
-### Pedidos: pedido inexistente e identificador inválido
+### Pedidos inexistentes e identificadores inválidos
 
 ``` http
 GET http://localhost:8080/api/orders/690000000000000000000001
 ```
 
-Si no existe un pedido con ese identificador, se espera HTTP
-`404 Not Found` y el código `ORDER_NOT_FOUND`.
+Si el pedido no existe, se espera HTTP `404` y `ORDER_NOT_FOUND`.
 
 ``` http
 GET http://localhost:8080/api/orders/123
 ```
 
-Se espera HTTP `400 Bad Request` y el código `INVALID_ID`.
+Se espera HTTP `400` y `INVALID_ID`.
 
-### Usuarios: correo duplicado y correo obligatorio
+### Usuarios: correo duplicado y obligatorio
 
-Para probar el correo duplicado, enviar un `POST` a `/api/users` con un
-correo que ya exista en la base de datos:
+Enviar `POST http://localhost:8080/api/users` con un correo que ya
+exista, utilizando el cuerpo requerido por Swagger. Se espera HTTP `409`
+y `USER_EMAIL_ALREADY_EXISTS`.
 
-``` http
-POST http://localhost:8080/api/users
-Content-Type: application/json
-```
-
-``` json
-{
-  "name": "Usuario Duplicado",
-  "email": "correo.ya.registrado@example.com",
-  "role": "customer"
-}
-```
-
-Se espera HTTP `409 Conflict` y el código `USER_EMAIL_ALREADY_EXISTS`.
-
-Para probar el correo obligatorio:
-
-``` http
-POST http://localhost:8080/api/users
-Content-Type: application/json
-```
-
-``` json
-{
-  "name": "Usuario Sin Correo",
-  "role": "customer"
-}
-```
-
-Se espera HTTP `400 Bad Request` y el código `EMAIL_REQUIRED`.
+Enviar un `POST` al mismo endpoint omitiendo el correo electrónico y
+manteniendo los demás campos requeridos. Se espera HTTP `400` y
+`EMAIL_REQUIRED`.
 
 ### Productos: estado y stock inválidos
-
-Estado no permitido:
 
 ``` http
 GET http://localhost:8080/api/products?status=INVENTADO
 ```
 
-Se espera HTTP `400 Bad Request` y el código `INVALID_PRODUCT_STATUS`.
-
-Stock negativo:
+Se espera HTTP `400` y `INVALID_PRODUCT_STATUS`.
 
 ``` http
 POST http://localhost:8080/api/products
@@ -442,12 +503,9 @@ Content-Type: application/json
 }
 ```
 
-Se espera HTTP `400 Bad Request` y el código `INVALID_PRODUCT_STOCK`.
+Se espera HTTP `400` y `INVALID_PRODUCT_STOCK`.
 
-### Validación nativa de Mongoose
-
-Para probar la validación `min: 0` del campo `price` en el modelo
-`Product`:
+### Validación Mongoose
 
 ``` http
 POST http://localhost:8080/api/products
@@ -463,24 +521,32 @@ Content-Type: application/json
 }
 ```
 
-Se espera HTTP `400 Bad Request`, el código `VALIDATION_ERROR` y un
-arreglo `details` que identifique el campo `price`.
+Se espera HTTP `400`, `VALIDATION_ERROR` y un arreglo `details` que
+identifique `price`.
 
-## Mocks: generación de datos y Seed
+### JSON malformado y rutas inexistentes
 
-Generar dos usuarios:
+Enviar un cuerpo JSON inválido a un endpoint que espera JSON. Se espera
+HTTP `400` en formato JSON.
+
+Consultar una ruta inexistente. Se espera HTTP `404` y `ROUTE_NOT_FOUND`
+en formato JSON.
+
+## Mocks y Seed
+
+Generar usuarios:
 
 ``` http
 GET http://localhost:8080/api/mocks/users?qty=2
 ```
 
-Generar dos pedidos:
+Generar pedidos:
 
 ``` http
 GET http://localhost:8080/api/mocks/orders?qty=2
 ```
 
-Generar dos entregas:
+Generar entregas:
 
 ``` http
 GET http://localhost:8080/api/mocks/deliveries?qty=2
@@ -492,129 +558,247 @@ Insertar datos de prueba:
 POST http://localhost:8080/api/mocks/seed
 ```
 
-Si no se envía una cantidad, `seed` utiliza el valor predeterminado de
-10. La ejecución inserta usuarios, conductores, pedidos y entregas. Esta
-operación modifica MongoDB; evitar repetirla innecesariamente.
+Si no se envía cantidad, `seed` utiliza el valor predeterminado de 10.
+Inserta usuarios, conductores, pedidos y entregas. La operación modifica
+MongoDB; evitar repetirla innecesariamente.
+
+Para crear un pedido de prueba desde Swagger: 1. Ejecutar el endpoint de
+seed. 2. Identificar un `userId` y un `storeId` válidos entre los datos
+generados o consultando MongoDB. 3. Abrir Swagger UI y localizar el
+endpoint de creación de pedidos. 4. Seleccionar **Try it out** e
+ingresar los identificadores existentes y los demás campos requeridos.
+5. Ejecutar la solicitud y revisar la respuesta.
+
+Los identificadores deben corresponder a registros existentes en la base
+utilizada por la API.
 
 ## Carga de archivos con Multer
 
-A partir de la Pre-entrega 7, la API permite cargar documentos de usuarios y comprobantes asociados a pedidos. La implementación utiliza **Multer** con almacenamiento en disco (`diskStorage`); MongoDB conserva únicamente los metadatos del archivo, no su contenido binario.
+La API permite cargar documentos de usuarios y comprobantes de pedidos.
+Multer utiliza almacenamiento en disco (`diskStorage`); MongoDB conserva
+los metadatos, no el contenido binario.
 
 ### Configuración y almacenamiento
 
-La configuración centralizada se encuentra en `src/config/multer.config.js` e incluye:
+La configuración centralizada se encuentra en
+`src/config/multer.config.js`:
 
-- Carpetas de destino separadas por categoría:
-  - `uploads/users/`: documentos de usuarios.
-  - `uploads/orders/`: comprobantes de pedidos.
-- Nombres de archivo generados mediante UUID, conservando la extensión.
-- Tipos permitidos: PDF (`application/pdf`), JPG/JPEG (`image/jpeg`) y PNG (`image/png`), con correspondencia entre MIME y extensión.
-- Tamaño máximo por archivo: **5 MB**.
-- Un archivo por solicitud, recibido en el campo multipart `file`.
+-   `uploads/users/`: documentos de usuarios.
+-   `uploads/orders/`: comprobantes de pedidos.
+-   Nombres de archivo generados mediante UUID, conservando la
+    extensión.
+-   Tipos permitidos: PDF (`application/pdf`), JPG/JPEG (`image/jpeg`) y
+    PNG (`image/png`), con correspondencia MIME/extensión.
+-   Tamaño máximo: **5 MB**.
+-   Un archivo por solicitud, recibido en el campo `file`.
+-   Directorio base configurable mediante `UPLOADS_DIR`.
 
-La carpeta `uploads/` está excluida de Git mediante `.gitignore`. Los archivos cargados se almacenan en el sistema de archivos del servidor y no deben agregarse al repositorio.
+`uploads/` está excluido de Git. Los archivos se almacenan en el sistema
+de archivos del servidor y no deben agregarse al repositorio.
 
 ### Endpoints de carga
 
-Todas las solicitudes de carga utilizan `multipart/form-data`.
+Todas las solicitudes utilizan `multipart/form-data`.
 
-| Método | Endpoint | Campos del formulario | Descripción |
-|---|---|---|---|
-| `POST` | `/api/users/{id}/documents` | `file` (File), `documentType` (Text) | Carga un documento y lo asocia a un usuario existente. |
-| `POST` | `/api/orders/{id}/receipt` | `file` (File) | Carga un comprobante y lo asocia a un pedido existente. |
+  -----------------------------------------------------------------------------------
+  Método            Endpoint                      Campos            Descripción
+  ----------------- ----------------------------- ----------------- -----------------
+  `POST`            `/api/users/{id}/documents`   `file` (File),    Carga un
+                                                  `documentType`    documento para un
+                                                  (Text)            usuario
+                                                                    existente.
 
-#### Tipos de documento de usuario
+  `POST`            `/api/orders/{id}/receipt`    `file` (File)     Carga un
+                                                                    comprobante para
+                                                                    un pedido
+                                                                    existente.
+  -----------------------------------------------------------------------------------
 
-El campo `documentType` admite únicamente estos valores:
+Valores permitidos de `documentType`: - `identity` - `driver_license` -
+`vehicle_registration` - `other`
 
-- `identity`
-- `driver_license`
-- `vehicle_registration`
-- `other`
+Ejemplo de documento de usuario, en Postman seleccionar `POST` → `Body`
+→ `form-data`:
 
-#### Ejemplo: cargar un documento de usuario
+  Key              Type   Value
+  ---------------- ------ ------------------------------------
+  `file`           File   PDF, JPG/JPEG o PNG de hasta 5 MB.
+  `documentType`   Text   `identity` u otro valor permitido.
 
-En Postman seleccionar `POST`, abrir `Body` → `form-data` y configurar:
-
-| Key | Type | Value |
-|---|---|---|
-| `file` | File | Seleccionar un PDF, JPG/JPEG o PNG de hasta 5 MB. |
-| `documentType` | Text | `identity` (o uno de los otros valores permitidos). |
-
-Ejemplo de URL:
-
-```http
+``` http
 POST http://localhost:8080/api/users/ID_DEL_USUARIO/documents
 ```
 
-#### Ejemplo: cargar un comprobante de pedido
+Ejemplo de comprobante:
 
-En Postman seleccionar `POST` → `Body` → `form-data` y configurar:
+  Key      Type   Value
+  -------- ------ ------------------------------------
+  `file`   File   PDF, JPG/JPEG o PNG de hasta 5 MB.
 
-| Key | Type | Value |
-|---|---|---|
-| `file` | File | Seleccionar un PDF, JPG/JPEG o PNG de hasta 5 MB. |
-
-Ejemplo de URL:
-
-```http
+``` http
 POST http://localhost:8080/api/orders/ID_DEL_PEDIDO/receipt
 ```
 
-No establecer manualmente el encabezado `Content-Type`: Postman debe generarlo como `multipart/form-data` con su `boundary` correspondiente.
+No establecer manualmente `Content-Type`: Postman debe generar
+`multipart/form-data` con su `boundary`.
 
-### Metadatos almacenados en MongoDB
+### Metadatos y limpieza
 
-Para cada documento de usuario se almacena dentro de `User.documents`; para cada comprobante se almacena en `Order.receipt`. Los metadatos incluyen:
+Los metadatos almacenados incluyen: - `originalName`: nombre original. -
+`generatedName`: nombre único generado por el servidor. - `mimeType`:
+tipo MIME. - `size`: tamaño en bytes. - `uploadedAt`: fecha y hora de
+carga. - `documentType`: categoría, solo para documentos de usuario.
 
-- `originalName`: nombre original del archivo.
-- `generatedName`: nombre único generado por el servidor.
-- `path`: ruta del archivo almacenado.
-- `mimeType`: tipo MIME.
-- `size`: tamaño en bytes.
-- `documentType`: categoría del documento (solo para documentos de usuario).
-- `uploadedAt`: fecha y hora de carga.
+La ruta física se utiliza internamente para almacenamiento y limpieza,
+pero no se expone en las respuestas de la API ni forma parte de los
+metadatos públicos de `Order.receipt`.
 
-Si falla la asociación del archivo con el usuario o pedido, el servicio intenta eliminar el archivo físico para evitar archivos huérfanos.
+Si falla la asociación del archivo con el usuario o pedido, el servicio
+intenta eliminar el archivo físico para evitar archivos huérfanos.
 
 ### Errores de carga
 
-Los errores se integran al middleware centralizado y mantienen el formato general de la API (`status`, `message` y `code`). Los principales códigos son:
+  ----------------------------------------------------------------------------
+  Código                                            HTTP Situación
+  ------------------------- ---------------------------- ---------------------
+  `FILE_REQUIRED`                                    400 No se adjuntó un
+                                                         archivo.
 
-| Código | HTTP | Situación |
-|---|---:|---|
-| `FILE_REQUIRED` | 400 | No se adjuntó un archivo. |
-| `INVALID_FILE_TYPE` | 400 | El formato o la combinación MIME/extensión no está permitida. |
-| `INVALID_UPLOAD_FIELD` | 400 | El campo de archivo enviado no es `file`. |
-| `INVALID_DOCUMENT_TYPE` | 400 | El valor de `documentType` no está permitido. |
-| `USER_NOT_FOUND` | 404 | No existe el usuario indicado. |
-| `ORDER_NOT_FOUND` | 404 | No existe el pedido indicado. |
-| `FILE_TOO_LARGE` | 413 | El archivo supera los 5 MB. |
-| `UPLOAD_SAVE_FAILED` | 500 | No fue posible guardar el archivo. |
+  `INVALID_FILE_TYPE`                                400 Tipo o combinación
+                                                         MIME/extensión no
+                                                         permitida.
 
-### Logging y pruebas
+  `INVALID_UPLOAD_FIELD`                             400 Campo de archivo
+                                                         distinto de `file`.
 
-Winston registra las asociaciones exitosas de documentos y comprobantes, así como los errores que procesa el middleware global.
+  `INVALID_DOCUMENT_TYPE`                            400 Tipo de documento no
+                                                         permitido.
 
-Durante la validación manual con Postman se comprobaron cargas exitosas de documentos y comprobantes, archivo obligatorio, tipo de documento inválido, archivo superior a 5 MB y pedido inexistente. Además, la suite automatizada existente se ejecutó con `npm test`: **34 pruebas aprobadas**.
+  `USER_NOT_FOUND`                                   404 Usuario inexistente.
 
-La documentación interactiva de estos endpoints está disponible en Swagger UI:
+  `ORDER_NOT_FOUND`                                  404 Pedido inexistente.
 
-```text
-http://localhost:8080/api/docs
+  `FILE_TOO_LARGE`                                   413 Archivo superior a 5
+                                                         MB.
+
+  `UPLOAD_SAVE_FAILED`                               500 No fue posible
+                                                         guardar el archivo.
+  ----------------------------------------------------------------------------
+
+Las pruebas automatizadas incluyen carga válida, extensión no permitida,
+archivo superior a 5 MB y limpieza cuando falla la asociación del
+archivo.
+
+## Configuración de producción
+
+La aplicación valida las variables críticas al iniciar. Si falta una
+variable obligatoria o su valor no cumple las validaciones, el proceso
+falla durante el inicio.
+
+Variables obligatorias: - `PORT` - `MONGODB_URI` - `NODE_ENV`
+
+Entornos admitidos: `development`, `test` y `production`.
+
+`LOG_LEVEL` y `UPLOADS_DIR` permiten configurar logging y
+almacenamiento; si no se proporcionan, se aplican valores
+predeterminados.
+
+En producción: - Proporcionar las variables desde el entorno de
+despliegue. - No incluir credenciales ni archivos `.env` en la imagen o
+el repositorio. - Utilizar una base de datos independiente de la base de
+pruebas. - Mantener logs y archivos cargados fuera del control de
+versiones. - `/api/docs`, `/api/mocks` y `/api/loggerTest` no se montan
+cuando `NODE_ENV=production`. - `/api/health` permanece disponible para
+comprobar el estado de la API.
+
+## Docker
+
+El proyecto incluye un `Dockerfile` basado en Node.js 22 Alpine. Instala
+dependencias de producción, copia el código y expone el puerto `8080`.
+
+### Construir imagen
+
+Desde la raíz del proyecto:
+
+``` bash
+docker build -t shipnow-api .
 ```
 
-## Consideraciones
+### Ejecutar contenedor
 
--   No subir `.env` ni credenciales al repositorio.
--   No incluir `node_modules` en Git.
--   No incluir `logs/`, archivos `*.log` ni archivos `*.audit.json` en
-    Git.
+El contenedor recibe variables desde `.env` y monta un volumen Docker
+para persistir los archivos cargados:
+
+``` bash
+docker run -d --name shipnow-container -p 8080:8080 --env-file .env -v shipnow-uploads:/app/uploads shipnow-api
+```
+
+La API queda accesible en `http://localhost:8080`.
+
+### Verificaciones
+
+Estado del contenedor:
+
+``` bash
+docker ps --filter name=shipnow-container
+```
+
+Logs:
+
+``` bash
+docker logs shipnow-container
+```
+
+Health check:
+
+``` bash
+curl http://localhost:8080/api/health
+```
+
+Swagger, fuera de producción:
+
+``` bash
+curl -I http://localhost:8080/api/docs/
+```
+
+Debe responder HTTP `200` cuando el entorno no es producción.
+
+### Volumen persistente
+
+El volumen `shipnow-uploads` se monta en `/app/uploads`. Los archivos
+almacenados en el volumen persisten aunque se elimine y se cree
+nuevamente el contenedor.
+
+Comprobar el montaje:
+
+``` bash
+docker inspect shipnow-container --format '{{json .Mounts}}'
+```
+
+Eliminar el contenedor no elimina el volumen. No eliminar el volumen si
+se desea conservar los archivos cargados.
+
+### Archivos excluidos de la imagen
+
+`.dockerignore` excluye elementos que no deben incorporarse al contexto
+de construcción, como: - `node_modules/` - `.env` y archivos de entorno
+locales - `.git/` - `logs/` - `uploads/` - `coverage/` - archivos
+temporales
+
+Las variables se inyectan al iniciar el contenedor. Los logs y archivos
+cargados deben gestionarse mediante almacenamiento persistente o la
+solución de almacenamiento definida para el despliegue.
+
+## Consideraciones finales
+
+-   No subir `.env`, credenciales ni cadenas de conexión al repositorio.
+-   No incluir `node_modules/` en Git.
+-   No incluir `logs/`, `*.log` ni `*.audit.json` en Git.
 -   No incluir `uploads/` ni los archivos cargados por Multer en Git.
--   Utilizar `.env.example` como referencia para configurar el entorno.
+-   Utilizar `.env.example` como referencia.
 -   Las solicitudes que crean registros y la operación `seed` modifican
-    la base de datos. Utilizar datos de prueba y revisar la base antes
-    de repetir operaciones.
--   El endpoint `/api/logger/test` está destinado a comprobar el logger
-    y no debe considerarse una herramienta de monitoreo protegida para
-    producción.
+    MongoDB. Utilizar datos de prueba y revisar la base antes de repetir
+    operaciones.
+-   Los endpoints de documentación, mocks y prueba de logging son
+    herramientas internas y no están habilitados en producción.
+-   Ejecutar `npm test` antes de integrar cambios en la rama principal.

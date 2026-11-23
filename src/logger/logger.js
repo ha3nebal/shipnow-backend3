@@ -43,19 +43,15 @@ const logFormat = winston.format.combine(
   }),
 )
 
-// Configuración del nivel según el entorno.
-const consoleLevel =
-  config.nodeEnv === 'development' ? 'debug' : 'info'
-
-// Logger centralizado.
+// Logger centralizado con nivel configurable por entorno.
 export const logger = winston.createLogger({
   levels: customLevels,
-  level: 'debug',
+  level: config.logLevel,
   format: logFormat,
   transports: [
     // Salida por consola.
     new winston.transports.Console({
-      level: consoleLevel,
+      level: config.logLevel,
       format: winston.format.combine(
         winston.format.colorize({ all: true }),
         logFormat,
@@ -68,7 +64,7 @@ export const logger = winston.createLogger({
       datePattern: 'YYYY-MM-DD',
       maxSize: '10m',
       maxFiles: '14d',
-      level: 'debug',
+      level: config.logLevel,
     }),
 
     // Archivo exclusivo para errores y fallas críticas.

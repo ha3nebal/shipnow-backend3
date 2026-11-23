@@ -75,13 +75,42 @@ const router = Router()
  */
 router.post('/', createOrder)
 
+
 /**
  * @swagger
  * /api/orders:
  *   get:
- *     summary: Obtener todos los pedidos
- *     description: Devuelve los pedidos registrados, ordenados desde el más reciente.
+ *     summary: Obtener pedidos con paginación y filtros
+ *     description: Devuelve los pedidos registrados, ordenados desde el más reciente. Permite filtrar por estado y prioridad.
  *     tags: [Orders]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         description: Número de página.
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         description: Cantidad de pedidos por página (máximo 100).
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *       - in: query
+ *         name: status
+ *         description: Filtrar pedidos por estado.
+ *         schema:
+ *           type: string
+ *           enum: [pending, assigned, in_transit, delivered, cancelled]
+ *       - in: query
+ *         name: priority
+ *         description: Filtrar pedidos por prioridad.
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high]
  *     responses:
  *       200:
  *         description: Pedidos obtenidos correctamente.
@@ -96,6 +125,23 @@ router.post('/', createOrder)
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/Order'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         totalOrders:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         currentPage:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *       400:
+ *         description: Parámetros de paginación o filtros inválidos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Error interno o de base de datos.
  *         content:
@@ -159,7 +205,7 @@ router.get('/:id', getOrderById)
  *   patch:
  *     summary: Marcar un pedido como entregado
  *     description: Actualiza el estado del pedido a delivered. No permite entregar nuevamente un pedido que ya fue entregado.
- *     tags: [Orders]
+ *     tags: [Deliveries]
  *     parameters:
  *       - in: path
  *         name: id

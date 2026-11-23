@@ -1,0 +1,32 @@
+
+# Dependencias
+node_modules/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Git
+.git/
+.gitignore
+
+# Logs
+logs/
+*.log
+*.audit.json
+
+# Archivos cargados
+uploads/
+
+# Pruebas y cobertura
+coverage/
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Archivos del sistema
+.DS_Store

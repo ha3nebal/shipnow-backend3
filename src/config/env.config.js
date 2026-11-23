@@ -1,17 +1,19 @@
 import dotenv from 'dotenv'
 
-// Seleccionar el archivo de entorno según NODE_ENV.
-const envFile = process.env.NODE_ENV === 'test'
-  ? '.env.test'
-  : '.env'
+// Cargar archivos locales solo en desarrollo y testing.
+// En producción, las variables deben recibirse externamente.
+if (process.env.NODE_ENV !== 'production') {
+  const envFile = process.env.NODE_ENV === 'test'
+    ? '.env.test'
+    : '.env'
 
-const result = dotenv.config({ path: envFile })
+  const result = dotenv.config({ path: envFile })
 
-// En testing, el archivo .env.test debe existir.
-if (process.env.NODE_ENV === 'test' && result.error) {
-  throw new Error(
-    '[CONFIG ERROR] No se pudo cargar el archivo .env.test'
-  )
+  if (process.env.NODE_ENV === 'test' && result.error) {
+    throw new Error(
+      '[CONFIG ERROR] No se pudo cargar el archivo .env.test'
+    )
+  }
 }
 
 // Validar variables obligatorias.
@@ -41,9 +43,30 @@ if (!validEnvironments.includes(process.env.NODE_ENV)) {
   )
 }
 
+// Validar el nivel de registro de Winston.
+const validLogLevels = [
+  'fatal',
+  'error',
+  'warning',
+  'info',
+  'http',
+  'debug',
+]
+
+const logLevel = (
+  process.env.LOG_LEVEL?.trim().toLowerCase() ||
+  (process.env.NODE_ENV === 'development' ? 'debug' : 'info')
+)
+
+if (!validLogLevels.includes(logLevel)) {
+  throw new Error(
+    `[CONFIG ERROR] LOG_LEVEL debe ser uno de estos valores: ${validLogLevels.join(', ')}`
+  )
+}
+
 const mongoUri = process.env.MONGODB_URI
 
-// Evitar que las pruebas se conecten a la base de datos de desarrollo.
+// Evitar que las pruebas utilicen la base de datos de desarrollo.
 if (process.env.NODE_ENV === 'test') {
   const databaseName = new URL(mongoUri).pathname
     .replace(/^\/+/, '')
@@ -56,8 +79,12 @@ if (process.env.NODE_ENV === 'test') {
   }
 }
 
+const uploadsDir = process.env.UPLOADS_DIR?.trim() || './uploads'
+
 export const config = Object.freeze({
   port,
   mongoUri,
   nodeEnv: process.env.NODE_ENV,
+  logLevel,
+  uploadsDir,
 })

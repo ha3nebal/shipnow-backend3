@@ -67,27 +67,72 @@ const router = Router()
  */
 router.post('/', createUser)
 
+
 /**
  * @swagger
  * /api/users:
  *   get:
- *     summary: Obtener todos los usuarios
- *     description: Devuelve el listado completo de usuarios registrados.
+ *     summary: Obtener usuarios con paginación y filtros
+ *     description: Devuelve usuarios paginados. Permite limitar resultados y filtrar por rol. Los documentos privados no se incluyen.
  *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Número de página.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Cantidad máxima de usuarios por página.
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, user, customer, driver, store]
+ *         description: Filtrar usuarios por rol.
  *     responses:
  *       200:
  *         description: Usuarios obtenidos correctamente.
  *         content:
  *           application/json:
  *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 payload:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *                 pagination:
+ *                   type: object
  *                   properties:
- *                     payload:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/User'
+ *                     totalUsers:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *       400:
+ *         description: Parámetros de paginación o filtro inválidos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Error interno o de base de datos.
  *         content:

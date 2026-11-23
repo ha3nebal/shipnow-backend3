@@ -93,8 +93,36 @@ export const usersService = {
       throw error
     }
   },
+  getUsers: async ({ page = '1', limit = '10', role } = {}) => {
+    const currentPage = Number(page)
+    const currentLimit = Number(limit)
 
-  getUsers: () => usersRepository.findAll(),
+    // Validar número de página.
+    if (!Number.isInteger(currentPage) || currentPage < 1) {
+      throw new CustomError('VALIDATION_ERROR')
+    }
+
+    // Validar límite de registros.
+    if (
+      !Number.isInteger(currentLimit) ||
+      currentLimit < 1 ||
+      currentLimit > 100
+    ) {
+      throw new CustomError('VALIDATION_ERROR')
+    }
+
+    // Validar rol cuando se proporciona.
+    if (role && !Object.values(USER_ROLES).includes(role)) {
+      throw new CustomError('VALIDATION_ERROR')
+    }
+
+    return usersRepository.findAll({
+      page: currentPage,
+      limit: currentLimit,
+      role,
+    })
+  },
+
 
   createStore: (data) => storesRepository.create(data),
 }

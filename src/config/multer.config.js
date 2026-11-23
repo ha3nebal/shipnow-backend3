@@ -1,12 +1,13 @@
 
 import multer from 'multer'
 import path from 'node:path'
-import { mkdirSync } from 'node:fs'
+import { mkdir } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { CustomError } from '../errors/CustomError.js'
+import { config } from './env.config.js'
 
 // Directorio principal de almacenamiento.
-const uploadsDirectory = path.resolve(process.cwd(), 'uploads')
+const uploadsDirectory = path.resolve(process.cwd(), config.uploadsDir)
 
 // Carpetas permitidas para cada categoría.
 const uploadDirectories = {
@@ -26,20 +27,20 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 // Configuración del almacenamiento físico.
 const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    const directory = uploadDirectories[req.uploadCategory]
+  destination: async (req, file, callback) => {
+  const directory = uploadDirectories[req.uploadCategory]
 
-    if (!directory) {
-      return callback(new CustomError('UPLOAD_SAVE_FAILED'))
-    }
+  if (!directory) {
+    return callback(new CustomError('UPLOAD_SAVE_FAILED'))
+  }
 
-    try {
-      mkdirSync(directory, { recursive: true })
-      callback(null, directory)
-    } catch (error) {
-      callback(new CustomError('UPLOAD_SAVE_FAILED'))
-    }
-  },
+  try {
+    await mkdir(directory, { recursive: true })
+    callback(null, directory)
+  } catch (error) {
+    callback(new CustomError('UPLOAD_SAVE_FAILED'))
+  }
+},
 
   filename: (req, file, callback) => {
     const extension = path.extname(file.originalname).toLowerCase()
